@@ -3,11 +3,14 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 const userRoutes = require("./routes/userRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 app.use("/api/users", userRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.get("/", (req,res)=>{
     res.send("PAWFECT API running");
