@@ -17,14 +17,18 @@ const reportSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    image: {
+        type: String
+    },
     reportedBy : {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    createdAt : {
-        type: Date,
-        default: Date.now
+    status: {
+        type: String,
+        enum: ["pending", "in-progress", "rescued"],
+        default: "pending"
     }
-});
+}, {timestamps: true});
 
 module.exports = mongoose.model("Report", reportSchema);

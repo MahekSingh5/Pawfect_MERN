@@ -4,13 +4,15 @@ const cors = require("cors");
 require("dotenv").config();
 const userRoutes = require("./routes/userRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-
+const volunteerRoutes = require("./routes/volunteerRoutes");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/volunteer", volunteerRoutes);
 
 app.get("/", (req,res)=>{
     res.send("PAWFECT API running");
