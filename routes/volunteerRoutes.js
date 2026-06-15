@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const {applyVolunteer, getMyVolunteerProfile, getAllVolunteerProfiles, approveVolunteer, rejectVolunteer, deApproveVolunteer, updateVolunteerProfile} = require("../controllers/volunteerController");
+const {applyVolunteer, getMyVolunteerProfile, getAllVolunteerProfiles, approveVolunteer, rejectVolunteer, deApproveVolunteer, updateVolunteerProfile, getNearestVolunteers, updateVolunteerLocation} = require("../controllers/volunteerController");
 
 const { protect, adminOnly} = require("../middleware/authMiddleware");
 const { validateVolunteerApplication } = require("../middleware/validationMiddleware");
@@ -13,5 +13,9 @@ router.put("/approve/:id", protect, adminOnly, approveVolunteer);
 router.put("/reject/:id", protect, adminOnly, rejectVolunteer);
 router.put("/de-approve/:id", protect, adminOnly, deApproveVolunteer);
 router.put("/update/:id", protect, updateVolunteerProfile);
+
+// Geospatial endpoints
+router.get("/nearest", getNearestVolunteers);
+router.put("/update-location", protect, updateVolunteerLocation);
 
 module.exports = router;

@@ -5,9 +5,20 @@ const reportSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    location : {
+    address : {
         type: String,
         required: true
+    },
+    location : {
+        type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point"
+        },
+        coordinates: {
+            type: [Number],
+            required: true
+        }
     },
     description : {
         type: String,
@@ -31,9 +42,16 @@ const reportSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "in-progress", "rescued"],
+        enum: ["pending", "assigned", "en-route", "rescued", "shelter-reached", "closed"],
         default: "pending"
+    },
+    lastUpdateNote: {
+        type: String,
+        default: ""
     }
 }, {timestamps: true});
+
+// Geospatial index for nearby searches
+reportSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("Report", reportSchema);

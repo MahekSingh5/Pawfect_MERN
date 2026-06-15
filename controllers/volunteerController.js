@@ -217,3 +217,132 @@ exports.updateVolunteerProfile = async (req, res) => {
         });
     }
 };
+
+// Geospatial: Find nearest approved volunteers
+exports.getNearestVolunteers = async (req, res) => {
+    try {
+        const { latitude, longitude, maxDistance = 10000, limit = 10 } = req.query;
+
+        if (latitude === undefined || longitude === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide latitude and longitude"
+            });
+        }
+
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+
+        // Validate coordinates
+        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid coordinates"
+            });
+        }
+
+        const volunteers = await VolunteerProfile.find({
+            isApproved: true,
+            currentLocation: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [lng, lat]
+                    },
+                    $maxDistance: parseInt(maxDistance)
+                }
+            }
+        })
+        .populate("user", "name email")
+        .limit(parseInt(limit));
+
+        res.status(200).json({
+            success: true,
+            count: volunteers.length,
+            searchCenter: {
+                type: "Point",
+                coordinates: [lng, lat]
+            },
+            maxDistanceMeters: maxDistance,
+            volunteers: volunteers.map(v => ({
+                volunteerId: v._id,
+                userId: v.user._id,
+                name: v.user.name,
+                email: v.user.email,
+                phone: v.phone,
+                city: v.city,
+                availability: v.availability,
+                preferredAnimals: v.preferredAnimals,
+                experience: v.experience,
+                location: v.currentLocation
+            }))
+        });
+
+    } catch (error) {
+        console.error("Get Nearest Volunteers Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while searching nearest volunteers",
+            error: error.message
+        });
+    }
+};
+
+// Update volunteer's current location
+exports.updateVolunteerLocation = async (req, res) => {
+    try {
+        const { latitude, longitude } = req.body;
+
+        if (latitude === undefined || longitude === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide latitude and longitude"
+            });
+        }
+
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+
+        // Validate coordinates
+        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid coordinates"
+            });
+        }
+
+        const volunteer = await VolunteerProfile.findOne({ user: req.user._id });
+
+        if (!volunteer) {
+            return res.status(404).json({
+                success: false,
+                message: "Volunteer profile not found"
+            });
+        }
+
+        volunteer.currentLocation = {
+            type: "Point",
+            coordinates: [lng, lat]
+        };
+
+        await volunteer.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Location updated successfully",
+            volunteer: {
+                _id: volunteer._id,
+                name: volunteer.user.name || "N/A",
+                location: volunteer.currentLocation
+            }
+        });
+
+    } catch (error) {
+        console.error("Update Volunteer Location Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while updating location",
+            error: error.message
+        });
+    }
+};
