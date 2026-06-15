@@ -1,6 +1,6 @@
-const { current } = require("@reduxjs/toolkit");
 const Report = require("../models/Report");
 const cloudinary = require("../config/cloudinary");
+const VolunteerProfile = require("../models/VolunteerProfile");
 
 exports.createReport = async (req , res) => {
     try{
@@ -51,6 +51,13 @@ exports.getReports = async (req, res)=>{
         const skip = (page - 1) * limit;
         const reports = await Report.find(filter)
             .populate("reportedBy", "name email")
+            .populate({
+                path: "assignedVolunteer",
+                populate: {
+                  path: "user",
+                  select: "name email",
+                },   
+            })
             .sort({createdAt: -1})
             .skip(skip)
             .limit(Number(limit));
@@ -87,7 +94,7 @@ exports.deleteReport = async (req, res) =>{
             return res.status(404).json({message: "Report not found"});
         }
         if(
-            report.reportedBy.toString() != req.user._id.toString() && !req.user.role !== "admin"
+            report.reportedBy.toString() !== req.user._id.toString() && req.user.role !== "admin"
         ){
             return res.status(403).json({message: "Not authorized to delete this report"});
         }
@@ -106,7 +113,7 @@ exports.updateReport = async (req, res) => {
         }
         //Only owner or admin can update
         if(
-            report.reportedBy.toString() !== req.user._id.toString() && !req.user.role !== "admin"
+            report.reportedBy.toString() !== req.user._id.toString() && req.user.role !== "admin"
         ){
             return res.status(403).json({message: "Not authorized"});
         }
@@ -123,4 +130,156 @@ exports.updateReport = async (req, res) => {
     }catch(error){
         res.status(500).json({message: "Server Error"});
     }
+};
+
+exports.assignVolunteerToReport = async (req, res) => {
+  try {
+    const { reportId, volunteerId } = req.body;
+
+    if (!reportId || !volunteerId) {
+      return res.status(400).json({
+        success: false,
+        message: "reportId and volunteerId are required",
+      });
+    }
+
+    const report = await Report.findById(reportId);
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    if (report.status === "rescued") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot assign volunteer to a rescued report",
+      });
+    }
+
+    const volunteer = await VolunteerProfile.findById(volunteerId);
+    if (!volunteer) {
+      return res.status(404).json({
+        success: false,
+        message: "Volunteer not found",
+      });
+    }
+
+    if (!volunteer.isApproved) {
+      return res.status(400).json({
+        success: false,
+        message: "Volunteer is not approved yet",
+      });
+    }
+
+    report.assignedVolunteer = volunteer._id;
+    report.status = "in-progress";
+
+    await report.save();
+
+    const updatedReport = await Report.findById(report._id)
+      .populate("reportedBy", "name email")
+      .populate({
+        path: "assignedVolunteer",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Volunteer assigned successfully",
+      report: updatedReport,
+    });
+  } catch (error) {
+    console.error("Assign Volunteer Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while assigning volunteer",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateReportStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const allowedStatuses = ["pending", "in-progress", "rescued"];
+
+    // Check valid status
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value",
+      });
+    }
+
+    // Find report
+    const report = await Report.findById(req.params.id)
+      .populate("assignedVolunteer");
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found",
+      });
+    }
+
+    // Prevent editing rescued reports
+    if (report.status === "rescued") {
+      return res.status(400).json({
+        success: false,
+        message: "Report already marked as rescued",
+      });
+    }
+
+    // Check if user is admin
+    const isAdmin = req.user.role === "admin";
+
+    // Check if assigned volunteer
+    const isAssignedVolunteer =
+      report.assignedVolunteer &&
+      report.assignedVolunteer.user.toString() === req.user._id.toString();
+
+    // Authorization check
+    if (!isAdmin && !isAssignedVolunteer) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this report",
+      });
+    }
+
+    // Update status
+    report.status = status;
+
+    await report.save();
+
+    const updatedReport = await Report.findById(report._id)
+      .populate("reportedBy", "name email")
+      .populate({
+        path: "assignedVolunteer",
+        populate: {
+          path: "user",
+          select: "name email",
+        },
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Report status updated successfully",
+      report: updatedReport,
+    });
+
+  } catch (error) {
+    console.error("Update Status Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while updating status",
+      error: error.message,
+    });
+  }
 };

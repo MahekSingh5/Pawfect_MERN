@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const upload = require("../middleware/uploadMiddleware");
 
-const { createReport, getReports, getReportById, deleteReport, updateReport } = require("../controllers/reportController");
-const { protect } = require("../middleware/authMiddleware");
+const { createReport, getReports, getReportById, deleteReport, updateReport, updateReportStatus, assignVolunteerToReport } = require("../controllers/reportController");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 router.post("/", protect, (req, res, next)=> {
     upload.single("image")(req, res, function(err){
@@ -17,9 +17,11 @@ router.post("/", protect, (req, res, next)=> {
     });
 }, createReport);
 router.get("/", getReports);
+router.put("/assign-volunteer", protect, adminOnly, assignVolunteerToReport);
+router.put("/:id/status", protect, updateReportStatus);
+
 router.get("/:id", getReportById);
 router.delete("/:id", protect, deleteReport);
 router.put("/:id", protect, updateReport);
-
 
 module.exports = router;

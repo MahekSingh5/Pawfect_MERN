@@ -24,6 +24,11 @@ const reportSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
+    assignedVolunteer : {
+        type: mongoose.Schema.Types.ObjectId,
+        ref : "VolunteerProfile",
+        default : null,
+    },
     status: {
         type: String,
         enum: ["pending", "in-progress", "rescued"],
