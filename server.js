@@ -13,6 +13,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const shelterRoutes = require("./routes/shelterRoutes");
 const { initializeSocket } = require("./socket/socketManager");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.set("io", io);
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Initialize socket connections
 initializeSocket(io);
@@ -44,6 +46,7 @@ app.use("/api/adoptions", adoptionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/shelters", shelterRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req, res) => {
   res.send("PAWFECT API running");

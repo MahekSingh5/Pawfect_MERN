@@ -48,6 +48,25 @@ const reportSchema = new mongoose.Schema({
     lastUpdateNote: {
         type: String,
         default: ""
+    },
+    aiAnalysis:{
+        severity: {
+            type:String,
+            enum: ["LOW", "MEDIUM", "HIGH"],
+            default: null
+        },
+        priorityScore: {
+            type: Number,
+            default: null
+        },
+        reasoning: {
+            type: String,
+            default: ""
+        },
+        analyzedAt: {
+            type: Date,
+            default: null
+        }
     }
 }, {timestamps: true});
 
